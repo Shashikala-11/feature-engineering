@@ -1,0 +1,755 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "4cb711aa",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00405,
+     "end_time": "2026-07-07T15:13:51.662745+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:51.658695+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# KNN Imputer | Multivariate Imputation | Handling Missing Data "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a9e7e6ce",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00295,
+     "end_time": "2026-07-07T15:13:51.670128+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:51.667178+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Advantages and Disadvantages\n",
+    "\n",
+    "1. More Accurate\n",
+    "2. More number of calculations\n",
+    "3. We need to put entire x_train dataset in production for unknown data .\n",
+    "4. Speed slower and memory consuming"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "4dd15e37",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:51.678184Z",
+     "iopub.status.busy": "2026-07-07T15:13:51.677156Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.230488Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.229514Z"
+    },
+    "papermill": {
+     "duration": 3.559952,
+     "end_time": "2026-07-07T15:13:55.232946+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:51.672994+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "\n",
+    "from sklearn.impute import KNNImputer,SimpleImputer\n",
+    "from sklearn.linear_model import LogisticRegression\n",
+    "\n",
+    "from sklearn.metrics import accuracy_score"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "b0ea7b4e",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.241769Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.240199Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.273327Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.272398Z"
+    },
+    "papermill": {
+     "duration": 0.039379,
+     "end_time": "2026-07-07T15:13:55.275453+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.236074+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "df=pd.read_csv('/kaggle/input/datasets/shashikalarajesh11/titanic-dataset/Titanic-Dataset.csv')[['Age','Pclass','Fare','Survived']]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "e484d343",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.283377Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.282374Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.307416Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.305713Z"
+    },
+    "papermill": {
+     "duration": 0.031417,
+     "end_time": "2026-07-07T15:13:55.309656+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.278239+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Fare</th>\n",
+       "      <th>Survived</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>22.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.2500</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>38.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>71.2833</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>26.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.9250</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>35.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>53.1000</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>35.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>8.0500</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "    Age  Pclass     Fare  Survived\n",
+       "0  22.0       3   7.2500         0\n",
+       "1  38.0       1  71.2833         1\n",
+       "2  26.0       3   7.9250         1\n",
+       "3  35.0       1  53.1000         1\n",
+       "4  35.0       3   8.0500         0"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "af915f0c",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.317262Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.316794Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.325304Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.324259Z"
+    },
+    "papermill": {
+     "duration": 0.01469,
+     "end_time": "2026-07-07T15:13:55.327227+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.312537+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Age         19.86532\n",
+       "Pclass       0.00000\n",
+       "Fare         0.00000\n",
+       "Survived     0.00000\n",
+       "dtype: float64"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df.isnull().mean()*100"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "a9e56c5a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.335525Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.334814Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.341576Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.340132Z"
+    },
+    "papermill": {
+     "duration": 0.013246,
+     "end_time": "2026-07-07T15:13:55.343560+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.330314+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "x=df.drop(columns=['Survived'])\n",
+    "y=df['Survived']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "230b5574",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.351281Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.350921Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.359067Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.358103Z"
+    },
+    "papermill": {
+     "duration": 0.014769,
+     "end_time": "2026-07-07T15:13:55.361281+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.346512+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "4c427052",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.371998Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.370499Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.382344Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.381365Z"
+    },
+    "papermill": {
+     "duration": 0.019094,
+     "end_time": "2026-07-07T15:13:55.384583+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.365489+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Fare</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>331</th>\n",
+       "      <td>45.5</td>\n",
+       "      <td>1</td>\n",
+       "      <td>28.5000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>733</th>\n",
+       "      <td>23.0</td>\n",
+       "      <td>2</td>\n",
+       "      <td>13.0000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>382</th>\n",
+       "      <td>32.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.9250</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>704</th>\n",
+       "      <td>26.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.8542</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>813</th>\n",
+       "      <td>6.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>31.2750</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      Age  Pclass     Fare\n",
+       "331  45.5       1  28.5000\n",
+       "733  23.0       2  13.0000\n",
+       "382  32.0       3   7.9250\n",
+       "704  26.0       3   7.8542\n",
+       "813   6.0       3  31.2750"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "x_train.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "b71d5021",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.392994Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.392647Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.427818Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.426297Z"
+    },
+    "papermill": {
+     "duration": 0.043007,
+     "end_time": "2026-07-07T15:13:55.430896+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.387889+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "knn=KNNImputer(n_neighbors=3)\n",
+    "\n",
+    "x_train_trf=knn.fit_transform(x_train)\n",
+    "x_test_trf=knn.transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "id": "ebd26de9",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.439670Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.439262Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.453750Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.452815Z"
+    },
+    "papermill": {
+     "duration": 0.021297,
+     "end_time": "2026-07-07T15:13:55.455650+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.434353+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Fare</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>45.5</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>28.5000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>23.0</td>\n",
+       "      <td>2.0</td>\n",
+       "      <td>13.0000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>32.0</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.9250</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>26.0</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.8542</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>6.0</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>31.2750</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>...</th>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>707</th>\n",
+       "      <td>21.0</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.6500</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>708</th>\n",
+       "      <td>38.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>31.0000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>709</th>\n",
+       "      <td>41.0</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>14.1083</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>710</th>\n",
+       "      <td>14.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>120.0000</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>711</th>\n",
+       "      <td>21.0</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>77.2875</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>712 rows × 3 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "      Age  Pclass      Fare\n",
+       "0    45.5     1.0   28.5000\n",
+       "1    23.0     2.0   13.0000\n",
+       "2    32.0     3.0    7.9250\n",
+       "3    26.0     3.0    7.8542\n",
+       "4     6.0     3.0   31.2750\n",
+       "..    ...     ...       ...\n",
+       "707  21.0     3.0    7.6500\n",
+       "708  38.0     1.0   31.0000\n",
+       "709  41.0     3.0   14.1083\n",
+       "710  14.0     1.0  120.0000\n",
+       "711  21.0     1.0   77.2875\n",
+       "\n",
+       "[712 rows x 3 columns]"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "pd.DataFrame(x_train_trf,columns=x_train.columns)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "id": "57f34f85",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.464387Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.464005Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.496741Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.495313Z"
+    },
+    "papermill": {
+     "duration": 0.042285,
+     "end_time": "2026-07-07T15:13:55.501291+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.459006+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.7430167597765364"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "lr=LogisticRegression()\n",
+    "lr.fit(x_train_trf,y_train)\n",
+    "y_pred=lr.predict(x_test_trf)\n",
+    "accuracy_score(y_test,y_pred)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "id": "1b843e5f",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.514856Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.514356Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.528826Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.527991Z"
+    },
+    "papermill": {
+     "duration": 0.024003,
+     "end_time": "2026-07-07T15:13:55.531007+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.507004+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# Comparison with Simple Imputer --> mean\n",
+    "\n",
+    "si=SimpleImputer()\n",
+    "x_train_trf2=si.fit_transform(x_train)\n",
+    "x_test_trf2=si.transform(x_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "id": "0be1662d",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:13:55.546825Z",
+     "iopub.status.busy": "2026-07-07T15:13:55.546414Z",
+     "iopub.status.idle": "2026-07-07T15:13:55.564916Z",
+     "shell.execute_reply": "2026-07-07T15:13:55.562666Z"
+    },
+    "papermill": {
+     "duration": 0.028714,
+     "end_time": "2026-07-07T15:13:55.567648+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.538934+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.7374301675977654"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "lr=LogisticRegression()\n",
+    "\n",
+    "lr.fit(x_train_trf2,y_train)\n",
+    "y_pred2=lr.predict(x_test_trf2)\n",
+    "accuracy_score(y_test,y_pred2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9c5a2436",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00524,
+     "end_time": "2026-07-07T15:13:55.578907+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.573667+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "28ba53db",
+   "metadata": {
+    "papermill": {
+     "duration": 0.005172,
+     "end_time": "2026-07-07T15:13:55.589372+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:13:55.584200+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [],
+   "dockerImageVersionId": 28755,
+   "isGpuEnabled": false,
+   "isInternetEnabled": false,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.13"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 10.46344,
+   "end_time": "2026-07-07T15:13:58.751069+00:00",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-07-07T15:13:48.287629+00:00",
+   "version": "2.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
