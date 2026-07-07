@@ -1,0 +1,663 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "3a39b9cc",
+   "metadata": {
+    "papermill": {
+     "duration": 0.003725,
+     "end_time": "2026-07-07T15:41:04.051951+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:04.048226+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "# Multivariate-Imputation-by-Chained-Equations-For-Missing-Equations\n",
+    "\n",
+    "**MICE** - Multivariate Imputation by Chained Equations"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a4d79673",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002673,
+     "end_time": "2026-07-07T15:41:04.057365+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:04.054692+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Assumptions :\n",
+    "\n",
+    "- Rubin in 1976 classified missing data into three categories: \n",
+    "- There can be three ways how data can be missing in dataset.\n",
+    "  1. MCAR (Missing Completely At Random)\n",
+    "  2. MAR (Missing At Random)\n",
+    "  3. MNAR (Missing Not At Random)\n",
+    "\n",
+    "- **MCAR** implies the reason for the missingness of a field is completely random,and that we probably can't predict that value from any other value in the data. Maybe the questionnaires failed to reach the respondent.\n",
+    "- **MAR** implies that the missingness of a field can be explained by the values in other columns, but not from that column. If your crush doesn't respond to your proposal, you can probably get your answer by looking at other variables like \"whether she likes someone else?\" or \"her parents want arranged marriage\" etc.\n",
+    "- **MNAR** implies there was a reason why the respondent didnt fill up that field, and hence that data is NOT missing at random. For example, if someone is obese, they'd be less likely to disclose their weights.\n",
+    "- If we have MNAR, we need to inspect why the data was missing, rather than straightway imputing them.\n",
+    "\n",
+    "- \"The bsic MICE assumption is that the data is Missing at Random, and that we can make an educated guess about its true value by looking at other data samples.\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5694036e",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002457,
+     "end_time": "2026-07-07T15:41:04.062258+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:04.059801+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### What is Iterative Imputation?\n",
+    "\n",
+    "Iterative imputation is a technique where missing values are filled in by modeling each feature with missing values as a function of the other features in the dataset. Instead of filling missing values with simple statistics (like mean or median), iterative imputation works by leveraging the information in other variables to predict the missing values, and then iterates to refine these predictions.\n",
+    "\n",
+    "It’s a model-based approach that can be more accurate, especially when there are complex relationships among features. The goal of iterative imputation is to create realistic estimates for missing values, helping you build a more reliable dataset for analysis or machine learning tasks."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "a7552789",
+   "metadata": {
+    "papermill": {
+     "duration": 0.00235,
+     "end_time": "2026-07-07T15:41:04.066993+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:04.064643+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "### Advantages: Accurate\n",
+    "### Disadvantages: Slow\n",
+    "\n",
+    "### Working of MICE Algorithm:\n",
+    "\n",
+    "1. Actual Dataset\n",
+    "2. Removing the target column\n",
+    "3. Introduced some fake nan values\n",
+    "\n",
+    "### Steps\n",
+    "   \n",
+    "1. Fill all the NaN values with mean of respective cols.\n",
+    "2. Remove all col1 missing values\n",
+    "3. Predict the missing values of col1 using other cols\n",
+    "4. Remove all col2 missing values\n",
+    "5. Predict the missing values of col2 using cols.\n",
+    "6. Remove all col3 values."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "1b135176",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:04.073715Z",
+     "iopub.status.busy": "2026-07-07T15:41:04.073339Z",
+     "iopub.status.idle": "2026-07-07T15:41:05.191689Z",
+     "shell.execute_reply": "2026-07-07T15:41:05.190586Z"
+    },
+    "papermill": {
+     "duration": 1.124509,
+     "end_time": "2026-07-07T15:41:05.193989+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:04.069480+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "d1fa5587",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:05.200985Z",
+     "iopub.status.busy": "2026-07-07T15:41:05.200452Z",
+     "iopub.status.idle": "2026-07-07T15:41:05.279202Z",
+     "shell.execute_reply": "2026-07-07T15:41:05.278290Z"
+    },
+    "papermill": {
+     "duration": 0.08434,
+     "end_time": "2026-07-07T15:41:05.281087+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:05.196747+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Original Data:\n",
+      "\n"
+     ]
+    },
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Fare</th>\n",
+       "      <th>Survived</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>22.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.2500</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>38.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>71.2833</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>26.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>7.9250</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>35.0</td>\n",
+       "      <td>1</td>\n",
+       "      <td>53.1000</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>35.0</td>\n",
+       "      <td>3</td>\n",
+       "      <td>8.0500</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "    Age  Pclass     Fare  Survived\n",
+       "0  22.0       3   7.2500         0\n",
+       "1  38.0       1  71.2833         1\n",
+       "2  26.0       3   7.9250         1\n",
+       "3  35.0       1  53.1000         1\n",
+       "4  35.0       3   8.0500         0"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df=pd.read_csv('/kaggle/input/datasets/shashikalarajesh11/titanic-dataset/Titanic-Dataset.csv')[['Age','Pclass','Fare','Survived']]\n",
+    "\n",
+    "print(\"Original Data:\\n\")\n",
+    "df.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "d1ead85d",
+   "metadata": {
+    "papermill": {
+     "duration": 0.002615,
+     "end_time": "2026-07-07T15:41:05.286372+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:05.283757+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "source": [
+    "Apply Iterative Imputation: Now, use IterativeImputer from sklearn to impute the missing values:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "f2976927",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:05.293116Z",
+     "iopub.status.busy": "2026-07-07T15:41:05.292762Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.718898Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.717873Z"
+    },
+    "papermill": {
+     "duration": 2.432116,
+     "end_time": "2026-07-07T15:41:07.721085+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:05.288969+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.experimental import enable_iterative_imputer\n",
+    "from sklearn.impute import IterativeImputer"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "dd736ac2",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:07.728140Z",
+     "iopub.status.busy": "2026-07-07T15:41:07.727649Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.732202Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.731253Z"
+    },
+    "papermill": {
+     "duration": 0.0104,
+     "end_time": "2026-07-07T15:41:07.734131+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:07.723731+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [],
+   "source": [
+    "# Create an iterative imputer object\n",
+    "imputer=IterativeImputer(max_iter=10,random_state=10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "22156663",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:07.741186Z",
+     "iopub.status.busy": "2026-07-07T15:41:07.740782Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.789407Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.788445Z"
+    },
+    "papermill": {
+     "duration": 0.054613,
+     "end_time": "2026-07-07T15:41:07.791484+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:07.736871+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[22.        ,  3.        ,  7.25      ,  0.        ],\n",
+       "       [38.        ,  1.        , 71.2833    ,  1.        ],\n",
+       "       [26.        ,  3.        ,  7.925     ,  1.        ],\n",
+       "       ...,\n",
+       "       [25.93080549,  3.        , 23.45      ,  0.        ],\n",
+       "       [26.        ,  1.        , 30.        ,  1.        ],\n",
+       "       [32.        ,  3.        ,  7.75      ,  0.        ]])"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Apply iterative imputation\n",
+    "df_imputed=imputer.fit_transform(df)\n",
+    "\n",
+    "df_imputed"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "51444819",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:07.799260Z",
+     "iopub.status.busy": "2026-07-07T15:41:07.798327Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.811370Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.810371Z"
+    },
+    "papermill": {
+     "duration": 0.018856,
+     "end_time": "2026-07-07T15:41:07.813199+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:07.794343+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>Age</th>\n",
+       "      <th>Pclass</th>\n",
+       "      <th>Fare</th>\n",
+       "      <th>Survived</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>22.000000</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.2500</td>\n",
+       "      <td>0.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>38.000000</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>71.2833</td>\n",
+       "      <td>1.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>26.000000</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.9250</td>\n",
+       "      <td>1.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>35.000000</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>53.1000</td>\n",
+       "      <td>1.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>35.000000</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>8.0500</td>\n",
+       "      <td>0.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>...</th>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "      <td>...</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>886</th>\n",
+       "      <td>27.000000</td>\n",
+       "      <td>2.0</td>\n",
+       "      <td>13.0000</td>\n",
+       "      <td>0.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>887</th>\n",
+       "      <td>19.000000</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>30.0000</td>\n",
+       "      <td>1.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>888</th>\n",
+       "      <td>25.930805</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>23.4500</td>\n",
+       "      <td>0.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>889</th>\n",
+       "      <td>26.000000</td>\n",
+       "      <td>1.0</td>\n",
+       "      <td>30.0000</td>\n",
+       "      <td>1.0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>890</th>\n",
+       "      <td>32.000000</td>\n",
+       "      <td>3.0</td>\n",
+       "      <td>7.7500</td>\n",
+       "      <td>0.0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "<p>891 rows × 4 columns</p>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "           Age  Pclass     Fare  Survived\n",
+       "0    22.000000     3.0   7.2500       0.0\n",
+       "1    38.000000     1.0  71.2833       1.0\n",
+       "2    26.000000     3.0   7.9250       1.0\n",
+       "3    35.000000     1.0  53.1000       1.0\n",
+       "4    35.000000     3.0   8.0500       0.0\n",
+       "..         ...     ...      ...       ...\n",
+       "886  27.000000     2.0  13.0000       0.0\n",
+       "887  19.000000     1.0  30.0000       1.0\n",
+       "888  25.930805     3.0  23.4500       0.0\n",
+       "889  26.000000     1.0  30.0000       1.0\n",
+       "890  32.000000     3.0   7.7500       0.0\n",
+       "\n",
+       "[891 rows x 4 columns]"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# Convert the imputed array back to a DataFrame\n",
+    "df_imputed = pd.DataFrame(df_imputed, columns=df.columns)\n",
+    "df_imputed"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "0ee84c8b",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:07.821062Z",
+     "iopub.status.busy": "2026-07-07T15:41:07.820612Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.828610Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.827473Z"
+    },
+    "papermill": {
+     "duration": 0.013883,
+     "end_time": "2026-07-07T15:41:07.830378+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:07.816495+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Data before Iterative Imputation:\n",
+      "      Age  Pclass     Fare  Survived\n",
+      "0    22.0       3   7.2500         0\n",
+      "1    38.0       1  71.2833         1\n",
+      "2    26.0       3   7.9250         1\n",
+      "3    35.0       1  53.1000         1\n",
+      "4    35.0       3   8.0500         0\n",
+      "..    ...     ...      ...       ...\n",
+      "886  27.0       2  13.0000         0\n",
+      "887  19.0       1  30.0000         1\n",
+      "888   NaN       3  23.4500         0\n",
+      "889  26.0       1  30.0000         1\n",
+      "890  32.0       3   7.7500         0\n",
+      "\n",
+      "[891 rows x 4 columns]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"\\nData before Iterative Imputation:\")\n",
+    "print(df)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "deb61e8a",
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2026-07-07T15:41:07.839629Z",
+     "iopub.status.busy": "2026-07-07T15:41:07.838873Z",
+     "iopub.status.idle": "2026-07-07T15:41:07.847871Z",
+     "shell.execute_reply": "2026-07-07T15:41:07.846745Z"
+    },
+    "papermill": {
+     "duration": 0.016364,
+     "end_time": "2026-07-07T15:41:07.849762+00:00",
+     "exception": false,
+     "start_time": "2026-07-07T15:41:07.833398+00:00",
+     "status": "completed"
+    },
+    "tags": []
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "Data after Iterative Imputation:\n",
+      "           Age  Pclass     Fare  Survived\n",
+      "0    22.000000     3.0   7.2500       0.0\n",
+      "1    38.000000     1.0  71.2833       1.0\n",
+      "2    26.000000     3.0   7.9250       1.0\n",
+      "3    35.000000     1.0  53.1000       1.0\n",
+      "4    35.000000     3.0   8.0500       0.0\n",
+      "..         ...     ...      ...       ...\n",
+      "886  27.000000     2.0  13.0000       0.0\n",
+      "887  19.000000     1.0  30.0000       1.0\n",
+      "888  25.930805     3.0  23.4500       0.0\n",
+      "889  26.000000     1.0  30.0000       1.0\n",
+      "890  32.000000     3.0   7.7500       0.0\n",
+      "\n",
+      "[891 rows x 4 columns]\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(\"\\nData after Iterative Imputation:\")\n",
+    "print(df_imputed)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "none",
+   "dataSources": [],
+   "dockerImageVersionId": 28755,
+   "isGpuEnabled": false,
+   "isInternetEnabled": false,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.13"
+  },
+  "papermill": {
+   "default_parameters": {},
+   "duration": 7.890728,
+   "end_time": "2026-07-07T15:41:08.573246+00:00",
+   "environment_variables": {},
+   "exception": null,
+   "input_path": "__notebook__.ipynb",
+   "output_path": "__notebook__.ipynb",
+   "parameters": {},
+   "start_time": "2026-07-07T15:41:00.682518+00:00",
+   "version": "2.7.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
